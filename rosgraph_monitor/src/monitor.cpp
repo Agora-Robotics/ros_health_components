@@ -484,17 +484,42 @@ std::unique_ptr<diagnostic_msgs::msg::DiagnosticArray> RosGraphMonitor::evaluate
   return msg;
 }
 
-void RosGraphMonitor::watch_for_updates()
-{
-  const auto wait_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-    std::chrono::milliseconds(100));
-  while (!shutdown_) {
-    if (graph_change_event_->check_and_clear()) {
-      update_graph();
-      update_event_.set();
+// This method is called too fast for our CPU and needs to be slowed down. We don't neccesary need realtime and on every update of the graph.
+// We will change this to call update_graph() after 1 second. Should be enough for now.
+
+// void RosGraphMonitor::watch_for_updates()
+// {
+//   const auto wait_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+//     std::chrono::milliseconds(100));
+//   while (!shutdown_) {
+//     if (graph_change_event_->check_and_clear()) {
+//       update_graph();
+//       update_event_.set();
+//     }
+//     node_graph_->wait_for_graph_change(graph_change_event_, wait_ns);
+//   }
+// }
+
+void RosGraphMonitor::watch_for_updates() {
+    RCLCPP_INFO(logger_, "Started periodic graph monitoring.");
+
+    while (rclcpp::ok() && !shutdown_.load()) {
+        auto start_time = std::chrono::steady_clock::now();
+
+        // Call update_graph every iteration
+        update_graph();
+
+        // Sleep for the remaining time to maintain a 1-second interval
+        auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+        auto sleep_duration = std::chrono::seconds(1) - elapsed_time;
+
+        if (sleep_duration > std::chrono::milliseconds(0)) {
+            std::this_thread::sleep_for(sleep_duration);
+        } else {
+            RCLCPP_WARN(logger_, "Graph update took longer than 1 second.");
+        }
     }
-    node_graph_->wait_for_graph_change(graph_change_event_, wait_ns);
-  }
+    RCLCPP_INFO(logger_, "Stopped periodic graph monitoring.");
 }
 
 bool RosGraphMonitor::wait_for_update(std::chrono::milliseconds timeout)
