@@ -22,6 +22,7 @@ rosgraph_monitor:
         type: string_array
         description: If node FQN starts with any of these prefixes, downgrade ERROR to WARN when missing
         default_value: []
+
     continuity:
       enable:
         type: bool
@@ -33,6 +34,7 @@ rosgraph_monitor:
         default_value:
           - /rosbag2_recorder
           - /foxglove_bridge
+        
       ignore_topic_types:
         type: string_array
         description: Never report discontinuities on topics with these types - useful for viz/debug messages
@@ -46,15 +48,17 @@ rosgraph_monitor:
         description: Never report discontinuities on topics with these exact names
         default_value:
           - /rosout
+
     topic_statistics:
       deadline_allowed_error:
         type: double
         description: Multiplier for the deadline period, if period falls within this error bound it is considered correct
-        default_value: 0.1
+        default_value: 1
       stale_timeout_ms:
         type: int
         description: Maximum period to receive updated statistics for a topic before an error is raised that it is missing
         default_value: 3000
+        
   graph_analyzer:
     diagnostic_prefix:
       type: string
@@ -64,11 +68,17 @@ rosgraph_monitor:
     mandatory_frequency_topics:
       type: string_array
       description: Pre-seeds list of topics that must exist, have deadlines, and meet them. Note all other discovered deadline topics are still tracked.
-      default_value: []
+      default_value:
+      - /cupoch_laserscan_rightcam
+      - /cupoch_laserscan_leftcam
+      - /cupoch_laserscan_frontcam
+      - /scan
+
     ignore_deadline_topics:
       type: string_array
       description: Topics with a deadline whose frequency should not be considered for health outcomes (escape hatch for known bad design/implementation)
-      default_value: []
+      default_value: [] #'/cupoch_laserscan_rightcam','/cupoch_laserscan_leftcam', '/cupoch_laserscan_frontcam'
+
     all_nodes_required:
       type: bool
       description: Whether it should be considered an error for any node to be reported as missing from the monitor
